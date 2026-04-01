@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日健身任务</title>
+    <style>
+        :root { --accent-blue: #00f2fe; --dark-bg: #0f172a; --card-bg: #1e293b; }
+        body { font-family: 'PingFang SC', sans-serif; background: var(--dark-bg); color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
+        /* 累计成就卡片 */
+        .stats-card { background: linear-gradient(135deg, #3b82f6, #06b6d4); width: 100%; max-width: 400px; padding: 20px; border-radius: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .total-days { font-size: 50px; font-weight: 900; margin: 5px 0; }
+        .label { font-size: 14px; opacity: 0.9; letter-spacing: 1px; }
+
+        /* 今日动作指南 */
+        .routine-card { background: var(--card-bg); width: 100%; max-width: 400px; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; box-sizing: border-box; }
+        .routine-title { color: var(--accent-blue); font-weight: bold; margin-bottom: 15px; border-left: 4px solid var(--accent-blue); padding-left: 10px; }
+        .exercise-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #334155; font-size: 15px; }
+        .exercise-item:last-child { border-bottom: none; }
+        .reps { color: var(--accent-blue); font-weight: bold; }
+        .goal-note { background: rgba(0,242,254,0.1); color: var(--accent-blue); padding: 10px; border-radius: 10px; margin-top: 15px; font-size: 13px; text-align: center; border: 1px dashed var(--accent-blue); }
+
+        /* 日历部分 */
+        .calendar-card { background: var(--card-bg); width: 100%; max-width: 400px; border-radius: 20px; padding: 20px; box-sizing: border-box; }
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
+        .day-label { color: #64748b; font-size: 12px; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; border: 1px solid #334155; font-size: 14px; }
+        .day.checked { background: var(--accent-blue); border-color: var(--accent-blue); color: #0f172a; font-weight: bold; box-shadow: 0 0 15px rgba(0,242,254,0.4); }
+        .day.other-month { opacity: 0.1; cursor: default; border: none; }
+        .nav-btn { background: #334155; border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="stats-card">
+        <div class="label">累计完成训练</div>
+        <div class="total-days" id="total-display">0</div>
+        <div class="label">DAYS</div>
+    </div>
+
+    <div class="routine-card">
+        <div class="routine-title">今日必做清单 (每组 30 次)</div>
+        <div class="exercise-item"><span>1. 胯下击掌</span> <span class="reps">x 30</span></div>
+        <div class="exercise-item"><span>2. 合手压膝</span> <span class="reps">x 30</span></div>
+        <div class="exercise-item"><span>3. 同侧提膝触肘</span> <span class="reps">x 30</span></div>
+        <div class="exercise-item"><span>4. 对侧提膝触肘</span> <span class="reps">x 30</span></div>
+        <div class="exercise-item"><span>5. 深蹲</span> <span class="reps">x 30</span></div>
+        <div class="goal-note">💡 目标：以上动作完成 4~5 次循环</div>
+    </div>
+
+    <div class="calendar-card">
+        <div class="cal-header">
+            <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+            <div id="month-display" style="font-weight: bold;"></div>
+            <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+        </div>
+        <div class="days-grid" id="days-grid"></div>
+    </div>
+
+    <script>
+        let currentViewDate = new Date();
+        let fitnessHistory = JSON.parse(localStorage.getItem('dailyWorkoutData')) || [];
+
+        function render() {
+            const grid = document.getElementById('days-grid');
+            const monthDisplay = document.getElementById('month-display');
+            grid.innerHTML = '';
+
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth();
+            monthDisplay.innerText = `${year}年 ${month + 1}月`;
+
+            ['日','一','二','三','四','五','六'].forEach(d => {
+                grid.innerHTML += `<div class="day-label">${d}</div>`;
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="day other-month"></div>`;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isChecked = fitnessHistory.includes(dateStr);
+                const dayEl = document.createElement('div');
+                dayEl.className = `day ${isChecked ? 'checked' : ''}`;
+                dayEl.innerText = d;
+                dayEl.onclick = () => toggleDate(dateStr);
+                grid.appendChild(dayEl);
+            }
+            document.getElementById('total-display').innerText = fitnessHistory.length;
+        }
+
+        function toggleDate(dateStr) {
+            const index = fitnessHistory.indexOf(dateStr);
+            if (index > -1) fitnessHistory.splice(index, 1);
+            else fitnessHistory.push(dateStr);
+            localStorage.setItem('dailyWorkoutData', JSON.stringify(fitnessHistory));
+            render();
+        }
+
+        function changeMonth(step) {
+            currentViewDate.setMonth(currentViewDate.getMonth() + step);
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
